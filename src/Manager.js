@@ -226,6 +226,7 @@ class GiveawaysManager extends EventEmitter {
             giveaway.messageID = message.id;
             this.giveaways.push(giveaway);
             await this.saveGiveaway(giveaway.messageID, giveaway.data);
+            setTimeout(async () => await this._checkGiveaway(giveaway), giveaway.remainingTime / 10);
             resolve(giveaway);
         });
     }
@@ -395,36 +396,34 @@ class GiveawaysManager extends EventEmitter {
     }
 
     /**
-     * Checks each giveaway and update it if needed
+     * Checks a giveaway and updates it if needed
      * @ignore
      * @private
      */
-    _checkGiveaway() {
-        if (this.giveaways.length <= 0) return;
-        this.giveaways.forEach(async (giveaway) => {
-            if (giveaway.ended) return;
-            if (!giveaway.channel) return;
-            if (giveaway.remainingTime <= 0) {
-                return this.end(giveaway.messageID).catch(() => {});
-            }
-            await giveaway.fetchMessage().catch(() => {});
-            if (!giveaway.message) {
-                giveaway.ended = true;
-                await this.editGiveaway(giveaway.messageID, giveaway.data);
-                return;
-            }
-            const embed = this.generateMainEmbed(giveaway, giveaway.lastChance.enabled && giveaway.remainingTime < giveaway.lastChance.threshold);
-            giveaway.message.edit(giveaway.messages.giveaway, { embed }).catch(() => {});
-            if (giveaway.remainingTime < this.options.updateCountdownEvery) {
-                setTimeout(() => this.end.call(this, giveaway.messageID), giveaway.remainingTime);
-            }
-            if (giveaway.lastChance.enabled && (giveaway.remainingTime - giveaway.lastChance.threshold) < this.options.updateCountdownEvery) {
-                setTimeout(() => {
-                    const embed = this.generateMainEmbed(giveaway, true);
-                    giveaway.message.edit(giveaway.messages.giveaway, { embed }).catch(() => {});
-                }, giveaway.remainingTime - giveaway.lastChance.threshold);
-            }
-        });
+    async _checkGiveaway(giveaway) {
+        if (giveaway.ended) return;
+        if (!giveaway.channel) return;
+        if (giveaway.remainingTime <= 0) {
+            return this.end(giveaway.messageID).catch(() => {});
+        }
+        await giveaway.fetchMessage().catch(() => {});
+        if (!giveaway.message) {
+            giveaway.ended = true;
+            await this.editGiveaway(giveaway.messageID, giveaway.data);
+            return;
+        }
+        const embed = this.generateMainEmbed(giveaway, giveaway.lastChance.enabled && giveaway.remainingTime < giveaway.lastChance.threshold);
+        giveaway.message.edit(giveaway.messages.giveaway, { embed }).catch(() => {});
+        if (giveaway.remainingTime < giveaway.remainingTime / 10) {
+            setTimeout(() => this.end.call(this, giveaway.messageID), giveaway.remainingTime);
+        }
+        if (giveaway.lastChance.enabled && (giveaway.remainingTime - giveaway.lastChance.threshold) < giveaway.remainingTime / 10) {
+            setTimeout(() => {
+                const embed = this.generateMainEmbed(giveaway, true);
+                giveaway.message.edit(giveaway.messages.giveaway, { embed }).catch(() => {});
+            }, giveaway.remainingTime - giveaway.lastChance.threshold);
+        }
+        setTimeout(async () => await this._checkGiveaway(giveaway), (giveaway.remainingTime / 10 < 5000 ? 5000 : giveaway.remainingTime / 10));
     }
 
     /**
@@ -468,12 +467,11 @@ class GiveawaysManager extends EventEmitter {
      */
     async _init() {
         const rawGiveaways = await this.getAllGiveaways();
-        rawGiveaways.forEach((giveaway) => {
-            this.giveaways.push(new Giveaway(this, giveaway));
-        });
-        setInterval(() => {
-            if (this.client.readyAt) this._checkGiveaway.call(this);
-        }, this.options.updateCountdownEvery);
+        rawGiveaways.forEach((giveaway) => this.giveaways.push(new Giveaway(this, giveaway)));
+
+        while (!this.client.readyAt) await new Promise(resolve => setTimeout(resolve, 1000));
+        this.giveaways.forEach(async (giveaway) => await this._checkGiveaway(giveaway));
+             
         this.ready = true;
         if (!isNaN(this.options.endedGiveawaysLifetime) && typeof this.options.endedGiveawaysLifetime === 'number') {
             const endedGiveaways = this.giveaways.filter(
