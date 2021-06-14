@@ -401,7 +401,7 @@ class Giveaway extends EventEmitter {
                 this.winnerIDs = winners.map((w) => w.id);
                 this.manager.editGiveaway(this.messageID, this.data);
                 const embed = this.manager.generateEndEmbed(this, winners);
-                this.message.edit(this.messages.giveawayEnded, { embed }).catch(() => {});
+                this.message.edit(this.messages.giveawayEnded, { content: this.messages.giveawayEnded, embed: embed }).catch(() => {});
                 const formattedWinners = winners.map((w) => `<@${w.id}>`).join(', ');
                 this.message.channel.send(
                     this.messages.winMessage
@@ -424,7 +424,7 @@ class Giveaway extends EventEmitter {
                 resolve(winners);
             } else {
                 const embed = this.manager.generateNoValidParticipantsEndEmbed(this);
-                this.message.edit(this.messages.giveawayEnded, { embed }).catch(() => {});
+                this.message.edit(this.messages.giveawayEnded, { content: this.messages.giveawayEnded, embed: embed }).catch(() => {});
                 resolve([]);
             }
         });
@@ -452,7 +452,7 @@ class Giveaway extends EventEmitter {
                 this.winnerIDs = winners.map((w) => w.id);
                 this.manager.editGiveaway(this.messageID, this.data);
                 const embed = this.manager.generateEndEmbed(this, winners);
-                this.message.edit(this.messages.giveawayEnded, { embed }).catch(() => {});
+                this.message.edit(this.messages.giveawayEnded, { content: this.messages.giveawayEnded, embed: embed }).catch(() => {});
                 const formattedWinners = winners.map((w) => '<@' + w.id + '>').join(', ');
                 this.channel.send(options.messages.congrat
                     .replace('{winners}', formattedWinners)
