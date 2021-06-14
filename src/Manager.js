@@ -86,14 +86,12 @@ ${giveaway.messages.inviteToParticipate}`).setTimestamp(new Date(giveaway.endAt)
             formattedWinners;
         const embed = new Discord.MessageEmbed();
         embed
-            .setAuthor(giveaway.prize)
+            .setTitle(giveaway.prize)
             .setColor(giveaway.embedColorEnd)
             .setFooter(giveaway.messages.endedAt)
             .setDescription(
-                winnersString +
-                    '\n' +
-                    (giveaway.hostedBy ? giveaway.messages.hostedBy.replace('{user}', giveaway.hostedBy) : '')
-            )
+`${giveaway.messages.before_winners ? giveaway.messages.before_winners + " " : ""}${winnersString}
+${giveaway.messages.before_winners ? giveaway.messages.before_winners + " " : ""}${giveaway.hostedBy ? giveaway.messages.hostedBy.replace('{user}', giveaway.hostedBy) : ''}`)
             .setTimestamp(new Date(giveaway.endAt).toISOString());
         return embed;
     }
