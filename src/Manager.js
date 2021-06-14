@@ -60,17 +60,14 @@ class GiveawaysManager extends EventEmitter {
     generateMainEmbed(giveaway) {
         const embed = new Discord.MessageEmbed();
         embed
-            .setAuthor(giveaway.prize)
+            .setTitle(giveaway.prize)
             .setColor(giveaway.embedColor)
-            .setFooter(`${giveaway.winnerCount} ${giveaway.messages.winners} • ${giveaway.messages.embedFooter}`)
-            .setDescription(
-                giveaway.messages.inviteToParticipate +
-                    '\n' +
-                    giveaway.remainingTimeText +
-                    '\n' +
-                    (giveaway.hostedBy ? giveaway.messages.hostedBy.replace('{user}', giveaway.hostedBy) : '')
-            )
-            .setTimestamp(new Date(giveaway.endAt).toISOString());
+            .setFooter(`${giveaway.messages.embedFooter}`)
+            .setDescription(`${giveaway.messages.before_winners ? giveaway.messages.before_winners + " " : ""}**${giveaway.winnerCount}** ${giveaway.messages.winners}
+${giveaway.messages.before_winners ? giveaway.messages.before_winners + " " : ""}${giveaway.hostedBy ? giveaway.messages.hostedBy.replace('{user}', giveaway.hostedBy) : ''}
+${giveaway.messages.before_winners ? giveaway.messages.before_winners + " " : ""}${giveaway.remainingTimeText}
+
+${giveaway.messages.inviteToParticipate}`).setTimestamp(new Date(giveaway.endAt).toISOString());
         return embed;
     }
 
@@ -102,7 +99,7 @@ class GiveawaysManager extends EventEmitter {
     }
 
     /**
-     * Generate an embed displayed when a giveaway is ended and when there is no valid participations
+     * Generate an embed displayed when a giveaway is ended and when there is no valid participant
      * @param {Giveaway} giveaway The giveaway the embed needs to be generated for
      * @returns {Discord.MessageEmbed} The generated embed
      */
@@ -135,7 +132,13 @@ class GiveawaysManager extends EventEmitter {
             if (!giveaway) {
                 return reject('No giveaway found with ID ' + messageID + '.');
             }
-            giveaway.end().then(resolve).catch(reject);
+            giveaway
+                .end()
+                .then((winners) => {
+                    this.emit('giveawayEnded', giveaway, winners);
+                    resolve();
+                })
+                .catch(reject);
         });
     }
 
@@ -219,11 +222,10 @@ class GiveawaysManager extends EventEmitter {
     reroll(messageID, options = {}) {
         return new Promise(async (resolve, reject) => {
             options = merge(defaultRerollOptions, options);
-            const giveawayData = this.giveaways.find((g) => g.messageID === messageID);
-            if (!giveawayData) {
+            const giveaway = this.giveaways.find((g) => g.messageID === messageID);
+            if (!giveaway) {
                 return reject('No giveaway found with ID ' + messageID + '.');
             }
-            const giveaway = new Giveaway(this, giveawayData);
             giveaway
                 .reroll(options)
                 .then((winners) => {
@@ -395,7 +397,7 @@ class GiveawaysManager extends EventEmitter {
                 return;
             }
             const embed = this.generateMainEmbed(giveaway);
-            giveaway.message.edit(giveaway.messages.giveaway, { embed });
+            giveaway.message.edit(giveaway.messages.giveaway, { embed }).catch(() => {});
             if (giveaway.remainingTime < this.options.updateCountdownEvery) {
                 setTimeout(() => this.end.call(this, giveaway.messageID), giveaway.remainingTime);
             }
@@ -466,7 +468,7 @@ class GiveawaysManager extends EventEmitter {
 }
 
 /**
- * Emitted when a giveaway ends.
+ * Emitted when a giveaway ended.
  * @event GiveawaysManager#giveawayEnded
  * @param {Giveaway} giveaway The giveaway instance
  * @param {Discord.GuildMember[]} winners The giveaway winners
@@ -488,9 +490,9 @@ class GiveawaysManager extends EventEmitter {
  * @param {Discord.MessageReaction} reaction The reaction to enter the giveaway
  *
  * @example
- * // This can be used to add features like removing the user reaction
+ * // This can be used to add features like removing reactions of members when they do not have a specific role (such as giveaway requirements). Best used with the `exemptMembers` property of the giveaways. 
  * manager.on('giveawayReactionAdded', (giveaway, member, reaction) => {
- *     if (!member.roles.cache.get('123456789'){
+ *     if (!member.roles.cache.get('123456789')) {
  *          reaction.users.remove(member.user);
  *          member.send('You must have this role to participate in the giveaway: Staff');
  *     }
@@ -498,33 +500,35 @@ class GiveawaysManager extends EventEmitter {
  */
 
 /**
- * Emitted when someone remove their reaction to a giveaway.
+ * Emitted when someone removed their reaction to a giveaway.
  * @event GiveawaysManager#giveawayReactionRemoved
  * @param {Giveaway} giveaway The giveaway instance
  * @param {Discord.GuildMember} member The member who remove their reaction giveaway
  * @param {Discord.MessageReaction} reaction The reaction to enter the giveaway
  *
  * @example
+ * // This can be used to add features such as a member-left-giveaway message in DM
  * manager.on('giveawayReactionRemoved', (giveaway, member, reaction) => {
- *      return member.send('That's sad, you won\'t be able to win the super cookie!');
+ *      return member.send('That\'s sad, you won\'t be able to win the super cookie!');
  * });
  */
 
 /**
- * Emitted when someone reacts to a ended giveaway.
+ * Emitted when someone reacted to a ended giveaway.
  * @event GiveawaysManager#endedGiveawayReactionAdded
  * @param {Giveaway} giveaway The giveaway instance
  * @param {Discord.GuildMember} member The member who reacted to the ended giveaway
  * @param {Discord.MessageReaction} reaction The reaction to enter the giveaway
  *
  * @example
+ * // This can be used to prevent new participants when giveaways get rerolled
  * manager.on('endedGiveawayReactionAdded', (giveaway, member, reaction) => {
  *      return reaction.users.remove(member.user);
  * });
  */
 
 /**
- * Emitted when a giveaway is rerolled.
+ * Emitted when a giveaway was rerolled.
  * @event GiveawaysManager#giveawayRerolled
  * @param {Giveaway} giveaway The giveaway instance
  * @param {Discord.GuildMember[]} winners The winners of the giveaway
