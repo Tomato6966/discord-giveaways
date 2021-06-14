@@ -409,7 +409,7 @@ class Giveaway extends EventEmitter {
                         .replace('{prize}', this.prize)
                         .replace('{messageURL}', this.messageURL)
                 );
-                for(const winner of winners){
+                for(const winner of this.winnerIDs){
                     await this.client.users.fetch(winner).then(user => {
                         user.send(
                             this.messages.winMessage
