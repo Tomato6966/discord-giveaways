@@ -199,7 +199,6 @@ ${giveaway.messages.before_winners ? giveaway.messages.before_winners + " " : ""
                 extraData: options.extraData
             });
             const embed = this.generateMainEmbed(giveaway);
-            console.log("START")
             const message = await channel.send({ content: giveaway.messages.giveaway, embed: embed });
             message.react(giveaway.reaction);
             giveaway.messageID = message.id;
@@ -396,7 +395,7 @@ ${giveaway.messages.before_winners ? giveaway.messages.before_winners + " " : ""
                 return;
             }
             const embed = this.generateMainEmbed(giveaway);
-            giveaway.message.edit({ content: giveaway.messages.giveaway, embed: embed }).catch(() => {});
+            giveaway.message.edit(giveaway.messages.giveaway, { content: giveaway.messages.giveaway, embed: embed }).catch(() => {});
             if (giveaway.remainingTime < this.options.updateCountdownEvery) {
                 setTimeout(() => this.end.call(this, giveaway.messageID), giveaway.remainingTime);
             }
