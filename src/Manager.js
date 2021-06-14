@@ -395,7 +395,6 @@ ${giveaway.messages.before_winners ? giveaway.messages.before_winners + " " : ""
                 return;
             }
             const embed = this.generateMainEmbed(giveaway);
-            console.log("edit")
             giveaway.message.edit(giveaway.messages.giveaway, { content: giveaway.messages.giveaway, embed: embed }).catch((e) => {console.log(e);});
             if (giveaway.remainingTime < this.options.updateCountdownEvery) {
                 setTimeout(() => this.end.call(this, giveaway.messageID), giveaway.remainingTime);
