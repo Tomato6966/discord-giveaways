@@ -401,7 +401,8 @@ class Giveaway extends EventEmitter {
                 this.winnerIDs = winners.map((w) => w.id);
                 this.manager.editGiveaway(this.messageID, this.data);
                 const embed = this.manager.generateEndEmbed(this, winners);
-                this.message.edit(this.messages.giveawayEnded, { content: this.messages.giveawayEnded, embed: embed }).catch(() => {});
+                console.log("edit4")
+                this.message.edit(this.messages.giveawayEnded, { content: this.messages.giveawayEnded, embed: embed }).catch((e) => {console.log(e);});
                 const formattedWinners = winners.map((w) => `<@${w.id}>`).join(', ');
                 this.message.channel.send(
                     this.messages.winMessage
@@ -410,7 +411,7 @@ class Giveaway extends EventEmitter {
                         .replace('{messageURL}', this.messageURL)
                 );
                 for(const winner of this.winnerIDs){
-                    await this.client.users.fetch(winner).then(user => {
+                    await this.client.users.fetch(winner.replace("<", "").replace(">", "").replace("@", "").replace("!", "")).then(user => {
                         user.send(
                             this.messages.winMessage
                                 .replace('{winners}', formattedWinners)
@@ -424,7 +425,9 @@ class Giveaway extends EventEmitter {
                 resolve(winners);
             } else {
                 const embed = this.manager.generateNoValidParticipantsEndEmbed(this);
-                this.message.edit(this.messages.giveawayEnded, { content: this.messages.giveawayEnded, embed: embed }).catch(() => {});
+                
+                console.log("edit3")
+                this.message.edit(this.messages.giveawayEnded, { content: this.messages.giveawayEnded, embed: embed }).catch((e) => {console.log(e);});
                 resolve([]);
             }
         });
@@ -452,7 +455,8 @@ class Giveaway extends EventEmitter {
                 this.winnerIDs = winners.map((w) => w.id);
                 this.manager.editGiveaway(this.messageID, this.data);
                 const embed = this.manager.generateEndEmbed(this, winners);
-                this.message.edit(this.messages.giveawayEnded, { content: this.messages.giveawayEnded, embed: embed }).catch(() => {});
+                console.log("edit2")
+                this.message.edit(this.messages.giveawayEnded, { content: this.messages.giveawayEnded, embed: embed }).catch((e) => {console.log(e);});
                 const formattedWinners = winners.map((w) => '<@' + w.id + '>').join(', ');
                 this.channel.send(options.messages.congrat
                     .replace('{winners}', formattedWinners)
