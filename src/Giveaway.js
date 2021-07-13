@@ -313,7 +313,7 @@ class Giveaway extends EventEmitter {
      * @param {number} [winnerCount=this.winnerCount] The number of winners to pick
      * @returns {Promise<Discord.GuildMember[]>} The winner(s)
      */
-    async roll(winnerCount) {
+        async roll(winnerCount = this.winnerCount) {
         if (!this.message) return [];
         // Pick the winner
         const reactions = this.message.reactions.cache;
@@ -327,7 +327,34 @@ class Giveaway extends EventEmitter {
             .filter((u) => u.id !== this.message.client.user.id);
         if (!users.size) return [];
 
-        const rolledWinners = users.random(Math.min(winnerCount || this.winnerCount, users.size));
+        // Bonus Entries
+        let userArray;
+        if (this.bonusEntries.length) {
+            userArray = users.array(); // Copy all users once
+            for (const user of userArray.slice()) {
+                const isUserValidEntry = await this.checkWinnerEntry(user);
+                if (!isUserValidEntry) continue;
+
+                const highestBonusEntries = await this.checkBonusEntries(user);
+                if (!highestBonusEntries) continue;
+
+                for (let i = 0; i < highestBonusEntries; i++) userArray.push(user);
+            }
+        }
+
+        let rolledWinners;
+        if (!userArray || userArray.length <= winnerCount)
+            rolledWinners = users.random(Math.min(winnerCount, users.size));
+        else {
+            /** 
+             * Random mechanism like https://github.com/discordjs/collection/blob/master/src/index.ts#L193
+             * because collections/maps do not allow dublicates and so we cannot use their built in "random" function
+             */
+            rolledWinners = Array.from({
+                length: Math.min(winnerCount, users.size)
+            }, () => userArray.splice(Math.floor(Math.random() * userArray.length), 1)[0]);
+        }
+
         const winners = [];
 
         for (const u of rolledWinners) {
@@ -335,7 +362,7 @@ class Giveaway extends EventEmitter {
             if (isValidEntry) winners.push(u);
             else {
                 // Find a new winner
-                for (const user of users.array()) {
+                for (const user of userArray || users.array()) {
                     const isUserValidEntry = !winners.some((winner) => winner.id === user.id) && (await this.checkWinnerEntry(user));
                     if (isUserValidEntry) {
                         winners.push(user);
@@ -345,7 +372,7 @@ class Giveaway extends EventEmitter {
             }
         }
 
-        return winners.map((user) => guild.member(user) || user);
+        return winners.map((user) => guild.members.cache.get(user.id) || user);
     }
 
     /**
@@ -425,8 +452,6 @@ class Giveaway extends EventEmitter {
                 resolve(winners);
             } else {
                 const embed = this.manager.generateNoValidParticipantsEndEmbed(this);
-                
-                console.log("edit3")
                 this.message.edit(this.messages.giveawayEnded, { content: this.messages.giveawayEnded, embed: embed }).catch((e) => {console.log(e);});
                 resolve([]);
             }
