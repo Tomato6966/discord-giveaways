@@ -327,21 +327,6 @@ class Giveaway extends EventEmitter {
             .filter((u) => u.id !== this.message.client.user.id);
         if (!users.size) return [];
 
-        // Bonus Entries
-        let userArray;
-        if (this.bonusEntries.length) {
-            userArray = users.array(); // Copy all users once
-            for (const user of userArray.slice()) {
-                const isUserValidEntry = await this.checkWinnerEntry(user);
-                if (!isUserValidEntry) continue;
-
-                const highestBonusEntries = await this.checkBonusEntries(user);
-                if (!highestBonusEntries) continue;
-
-                for (let i = 0; i < highestBonusEntries; i++) userArray.push(user);
-            }
-        }
-
         let rolledWinners;
         if (!userArray || userArray.length <= winnerCount)
             rolledWinners = users.random(Math.min(winnerCount, users.size));
