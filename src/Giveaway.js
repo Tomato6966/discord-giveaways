@@ -328,6 +328,7 @@ class Giveaway extends EventEmitter {
         if (!users.size) return [];
 
         let rolledWinners;
+        let userArray;
         if (!userArray || userArray.length <= winnerCount)
             rolledWinners = users.random(Math.min(winnerCount, users.size));
         else {
