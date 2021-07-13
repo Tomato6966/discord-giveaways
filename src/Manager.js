@@ -104,14 +104,15 @@ ${giveaway.messages.before_winners ? giveaway.messages.before_winners + " " : ""
     generateNoValidParticipantsEndEmbed(giveaway) {
         const embed = new Discord.MessageEmbed();
         embed
-            .setAuthor(giveaway.prize)
-            .setColor(giveaway.embedColorEnd)
-            .setFooter(giveaway.messages.endedAt)
-            .setDescription(
-                giveaway.messages.noWinner +
-                    '\n' +
-                    (giveaway.hostedBy ? giveaway.messages.hostedBy.replace('{user}', giveaway.hostedBy) : '')
-            )
+            .setTitle(giveaway.prize)
+            .setColor(giveaway.embedColor)
+            .setFooter(`${giveaway.messages.embedFooter}`)
+            .setDescription(`${giveaway.messages.noWinner}\n\n${giveaway.messages.before_winners ? giveaway.messages.before_winners + " " : ""}**${giveaway.winnerCount}** ${giveaway.messages.winners}
+${giveaway.messages.before_winners ? giveaway.messages.before_winners + " " : ""}${giveaway.hostedBy ? giveaway.messages.hostedBy.replace('{user}', giveaway.hostedBy) : ''}
+${giveaway.messages.before_winners ? giveaway.messages.before_winners + " " : ""}${giveaway.remainingTimeText} <t:${Math.floor(giveaway.endAt/1000)}>
+
+${giveaway.messages.inviteToParticipate}`).setTimestamp(new Date(giveaway.endAt).toISOString());
+            
             .setTimestamp(new Date(giveaway.endAt).toISOString());
         return embed;
     }
