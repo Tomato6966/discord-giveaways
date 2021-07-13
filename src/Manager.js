@@ -111,8 +111,7 @@ ${giveaway.messages.before_winners ? giveaway.messages.before_winners + " " : ""
 ${giveaway.messages.before_winners ? giveaway.messages.before_winners + " " : ""}${giveaway.hostedBy ? giveaway.messages.hostedBy.replace('{user}', giveaway.hostedBy) : ''}
 ${giveaway.messages.before_winners ? giveaway.messages.before_winners + " " : ""}${giveaway.remainingTimeText} <t:${Math.floor(giveaway.endAt/1000)}>
 
-${giveaway.messages.inviteToParticipate}`).setTimestamp(new Date(giveaway.endAt).toISOString());
-            
+${giveaway.messages.inviteToParticipate}`)
             .setTimestamp(new Date(giveaway.endAt).toISOString());
         return embed;
     }
