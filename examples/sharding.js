@@ -1,16 +1,22 @@
 const Discord = require('discord.js'),
-    client = new Discord.Client(),
+    client = new Discord.Client({
+        intents: [
+            Discord.Intents.FLAGS.GUILDS,
+            Discord.Intents.FLAGS.GUILD_MESSAGES,
+            Discord.Intents.FLAGS.GUILD_MESSAGE_REACTIONS
+        ]
+    }),
     settings = {
         prefix: 'g!',
-        token: 'Your Discord Token'
+        token: 'Your Discord Bot Token'
     };
 
 // Extends the GiveawaysManager class and update the refreshStorage method
 const { GiveawaysManager } = require('discord-giveaways');
 const GiveawayManagerWithShardSupport = class extends GiveawaysManager {
-    // Refresh storage method is called when the database is updated on one of the shards
+    // The refreshStorage method is called when the database is updated on one of the shards
     async refreshStorage() {
-        // This should make all shard refreshing their cache with the updated database
+        // This should make all shards refresh their cache with the updated database
         return client.shard.broadcastEval(() => this.giveawaysManager.getAllGiveaways());
     }
 };
@@ -21,8 +27,8 @@ const manager = new GiveawayManagerWithShardSupport(client, {
     updateCountdownEvery: 10000,
     default: {
         botsCanWin: false,
-        exemptPermissions: ['MANAGE_MESSAGES', 'ADMINISTRATOR'],
         embedColor: '#FF0000',
+        embedColorEnd: '#000000',
         reaction: '🎉'
     }
 });
@@ -30,7 +36,7 @@ const manager = new GiveawayManagerWithShardSupport(client, {
 client.giveawaysManager = manager;
 
 client.on('ready', () => {
-    console.log('I\'m ready !');
+    console.log('I\'m ready!');
 });
 
 client.login(settings.token);
