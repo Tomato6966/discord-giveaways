@@ -1,126 +1,112 @@
 const merge = require('deepmerge');
-const serialize = require('serialize-javascript');
 const Discord = require('discord.js');
 const { EventEmitter } = require('events');
-const {
-    GiveawayEditOptions,
-    GiveawayData,
-    GiveawayMessages,
-    GiveawayRerollOptions,
-    LastChanceOptions,
-    BonusEntry,
-    PauseOptions
-} = require('./Constants.js');
+const { GiveawayEditOptions, GiveawayData, GiveawayMessages, GiveawayRerollOptions } = require('./Constants.js');
 const GiveawaysManager = require('./Manager.js');
 
 /**
- * Represents a Giveaway.
+ * Represents a Giveaway
  */
 class Giveaway extends EventEmitter {
     /**
-     * @param {GiveawaysManager} manager The giveaway manager.
-     * @param {GiveawayData} options The giveaway data.
+     * @param {GiveawaysManager} manager The Giveaway Manager
+     * @param {GiveawayData} options The giveaway data
      */
     constructor(manager, options) {
         super();
         /**
-         * The giveaway manager.
+         * The Giveaway manager
          * @type {GiveawaysManager}
          */
         this.manager = manager;
         /**
-         * The Discord client.
+         * The Discord Client
          * @type {Discord.Client}
          */
         this.client = manager.client;
         /**
-         * The giveaway prize.
+         * The giveaway prize
          * @type {string}
          */
         this.prize = options.prize;
         /**
-         * The start date of the giveaway.
+         * The start date of the giveaway
          * @type {Number}
          */
         this.startAt = options.startAt;
         /**
-         * The end date of the giveaway.
+         * The end date of the giveaway
          * @type {Number}
          */
-        this.endAt = options.endAt === null ? Infinity : options.endAt;
+        this.endAt = options.endAt;
         /**
-         * Whether the giveaway is ended.
+         * Whether the giveaway is ended
          * @type {Boolean}
          */
-        this.ended = options.ended || false;
+        this.ended = options.ended;
         /**
-         * The Id of the channel of the giveaway.
+         * The channel ID of the giveaway
          * @type {Discord.Snowflake}
          */
-        this.channelId = options.channelId;
+        this.channelID = options.channelID;
         /**
-         * The Id of the message of the giveaway.
+         * The message ID of the giveaway
+         * @type {Discord.Snowflake?}
+         */
+        this.messageID = options.messageID;
+        /**
+         * The guild ID of the giveaway
          * @type {Discord.Snowflake}
          */
-        this.messageId = options.messageId;
+        this.guildID = options.guildID;
         /**
-         * The Id of the guild of the giveaway.
-         * @type {Discord.Snowflake}
-         */
-        this.guildId = options.guildId;
-        /**
-         * The number of winners for this giveaway.
+         * The number of winners for this giveaway
          * @type {number}
          */
         this.winnerCount = options.winnerCount;
         /**
-         * The winner Ids for this giveaway after it ended.
-         * @type {string[]}
+         * The winner IDs for this giveaway after it ended
+         * @type {Array<string>}
          */
-        this.winnerIds = options.winnerIds || [];
+        this.winnerIDs = options.winnerIDs;
         /**
-         * The mention of the user who hosts this giveaway.
-         * @type {string}
+         * The mention of the user who hosts this giveaway
+         * @type {?string}
          */
         this.hostedBy = options.hostedBy;
         /**
-         * The giveaway messages.
+         * The giveaway messages
          * @type {GiveawayMessages}
          */
         this.messages = options.messages;
         /**
-         * The URL appearing as the thumbnail on the giveaway embed.
-         * @type {string}
-         */
-        this.thumbnail = options.thumbnail;
-        /**
-         * Extra data concerning this giveaway.
+         * Extra data concerning this giveaway
          * @type {any}
          */
         this.extraData = options.extraData;
         /**
-         * The giveaway data.
+         * The giveaway data
          * @type {GiveawayData}
          */
         this.options = options;
         /**
-         * The message instance of the embed of this giveaway.
-         * @type {?Discord.Message}
+         * The message instance of the embed of this giveaway
+         * @type {Discord.Message?}
          */
         this.message = null;
     }
 
     /**
-     * The link to the giveaway message.
+     * The link to the giveaway message
      * @type {string}
      * @readonly
      */
-    get messageURL() {
-        return `https://discord.com/channels/${this.guildId}/${this.channelId}/${this.messageId}`;
+    get messageURL () {
+        return `https://discord.com/channels/${this.guildID}/${this.channelID}/${this.messageID}`;
     }
 
     /**
-     * The remaining time before the end of the giveaway.
+     * The remaining time before the end of the giveaway
      * @type {Number}
      * @readonly
      */
@@ -129,16 +115,16 @@ class Giveaway extends EventEmitter {
     }
 
     /**
-     * The total duration of the giveaway.
+     * The total duration of the giveaway
      * @type {Number}
      * @readonly
      */
-    get duration() {
+    get giveawayDuration() {
         return this.endAt - this.startAt;
     }
 
     /**
-     * The color of the giveaway embed.
+     * The color of the giveaway embed
      * @type {Discord.ColorResolvable}
      */
     get embedColor() {
@@ -146,7 +132,7 @@ class Giveaway extends EventEmitter {
     }
 
     /**
-     * The color of the giveaway embed when it has ended.
+     * The color of the giveaway embed when it's ended
      * @type {Discord.ColorResolvable}
      */
     get embedColorEnd() {
@@ -154,23 +140,23 @@ class Giveaway extends EventEmitter {
     }
 
     /**
-     * The reaction on the giveaway message.
-     * @type {Discord.EmojiIdentifierResolvable}
+     * The reaction on the giveaway message
+     * @type {string}
      */
     get reaction() {
         return this.options.reaction || this.manager.options.default.reaction;
     }
 
     /**
-     * If bots can win the giveaway.
+     * Whether the bots are able to win the giveaway
      * @type {Boolean}
      */
     get botsCanWin() {
-        return typeof this.options.botsCanWin === 'boolean' ? this.options.botsCanWin : this.manager.options.default.botsCanWin;
+        return this.options.botsCanWin || this.manager.options.default.botsCanWin;
     }
 
     /**
-     * Members with any of these permissions will not be able to win a giveaway.
+     * Members with any of these permissions won't be able to win a giveaway.
      * @type {Discord.PermissionResolvable[]}
      */
     get exemptPermissions() {
@@ -178,69 +164,43 @@ class Giveaway extends EventEmitter {
     }
 
     /**
-     * The options for the last chance system.
-     * @type {LastChanceOptions}
-     */
-    get lastChance() {
-        return merge(this.manager.options.default.lastChance, this.options.lastChance || {});
-    }
-
-    /**
-     * Pause options for this giveaway
-     * @type {PauseOptions}
-     */
-    get pauseOptions() {
-        return merge(PauseOptions, this.options.pauseOptions || {});
-    }
-
-    /**
-     * The array of BonusEntry objects for the giveaway.
-     * @type {BonusEntry[]}
-     */
-    get bonusEntries() {
-        return eval(this.options.bonusEntries) || [];
-    }
-
-    /**
-     * The exemptMembers function of the giveaway.
-     * @type {?Function}
-     */
-    get exemptMembersFunction() {
-        return this.options.exemptMembers
-            ? (typeof this.options.exemptMembers === 'string' && this.options.exemptMembers.includes('function anonymous'))
-                ? eval(`(${this.options.exemptMembers})`)
-                : eval(this.options.exemptMembers)
-            : null;
-    }
-
-    /**
      * Function to filter members. If true is returned, the member won't be able to win the giveaway.
-     * @property {Discord.GuildMember} member The member to check
-     * @returns {Promise<boolean>} Whether the member should get exempted
+     * @type {Function}
      */
     async exemptMembers(member) {
-        if (typeof this.exemptMembersFunction === 'function') {
+        if (this.options.exemptMembers && typeof this.options.exemptMembers === 'function') {
             try {
-                const result = await this.exemptMembersFunction(member);
+                const result = await this.options.exemptMembers(member);
                 return result;
-            } catch (err) {
-                console.error(`Giveaway message Id: ${this.messageId}\n${serialize(this.exemptMembersFunction)}\n${err}`);
+            } catch (error) {
+                console.error(error);
                 return false;
             }
         }
-        if (typeof this.manager.options.default.exemptMembers === 'function') {
+        if (
+            this.manager.options.default.exemptMembers &&
+            typeof this.manager.options.default.exemptMembers === 'function'
+        ) {
             return await this.manager.options.default.exemptMembers(member);
         }
         return false;
     }
 
     /**
-     * Gets the content of the giveaway.
+     * The channel of the giveaway
+     * @type {Discord.TextChannel}
+     * @readonly
+     */
+    get channel() {
+        return this.client.channels.cache.get(this.channelID);
+    }
+
+    /**
+     * Gets the content of the giveaway
      * @type {string}
      * @readonly
      */
     get remainingTimeText() {
-        if (this.endAt === Infinity) return this.messages.timeRemaining.replace('{duration}', 'Infinity');
         const roundTowardsZero = this.remainingTime > 0 ? Math.floor : Math.ceil;
         // Gets days, hours, minutes and seconds
         const days = roundTowardsZero(this.remainingTime / 86400000),
@@ -286,62 +246,46 @@ class Giveaway extends EventEmitter {
     }
 
     /**
-     * The raw giveaway object for this giveaway.
+     * The raw giveaway object for this giveaway
      * @type {GiveawayData}
      */
     get data() {
-        return {
-            messageId: this.messageId,
-            channelId: this.channelId,
-            guildId: this.guildId,
+        const baseData = {
+            messageID: this.messageID,
+            channelID: this.channelID,
+            guildID: this.guildID,
             startAt: this.startAt,
             endAt: this.endAt,
             ended: this.ended,
             winnerCount: this.winnerCount,
             prize: this.prize,
             messages: this.messages,
-            thumbnail: this.thumbnail,
             hostedBy: this.options.hostedBy,
             embedColor: this.options.embedColor,
             embedColorEnd: this.options.embedColorEnd,
             botsCanWin: this.options.botsCanWin,
             exemptPermissions: this.options.exemptPermissions,
-            exemptMembers:
-                (!this.options.exemptMembers || typeof this.options.exemptMembers === 'string')
-                    ? this.options.exemptMembers || undefined
-                    : serialize(this.options.exemptMembers),
-            bonusEntries:
-                (!this.options.bonusEntries || typeof this.options.bonusEntries === 'string')
-                    ? this.options.bonusEntries || undefined
-                    : serialize(this.options.bonusEntries),
+            exemptMembers: this.options.exemptMembers,
             reaction: this.options.reaction,
-            winnerIds: this.winnerIds.length ? this.winnerIds : undefined,
-            extraData: this.extraData,
-            lastChance: this.options.lastChance,
-            pauseOptions: this.options.pauseOptions
+            requirements: this.requirements,
+            winnerIDs: this.winnerIDs,
+            extraData: this.extraData
         };
+        return baseData;
     }
 
     /**
-     * Fetches the giveaway message from its channel.
+     * Fetches the giveaway message in its channel
      * @returns {Promise<Discord.Message>} The Discord message
      */
     async fetchMessage() {
         return new Promise(async (resolve, reject) => {
-            if (!this.messageId) return;
-            let tryLater = false;
-            const channel = await this.client.channels.fetch(this.channelId).catch((err) => {
-                if ((err.httpStatus).toString().startsWith('5') || err.httpStatus === 429 || err.code === 130000) tryLater = true;
-            });
-            const message = await channel?.messages.fetch(this.messageId).catch((err) => {
-                if ((err.httpStatus).toString().startsWith('5') || err.httpStatus === 429 || err.code === 130000) tryLater = true;
-            });
+            if (!this.messageID) return;
+            const message = await this.channel.messages.fetch(this.messageID).catch(() => {});
             if (!message) {
-                if (!tryLater) {
-                    this.manager.giveaways = this.manager.giveaways.filter((g) => g.messageId !== this.messageId);
-                    await this.manager.deleteGiveaway(this.messageId);
-                }
-                return reject('Unable to fetch message with Id ' + this.messageId + '.' + tryLater ? ' Try later!' : '');
+                this.manager.giveaways = this.manager.giveaways.filter((g) => g.messageID !== this.messageID);
+                this.manager.deleteGiveaway(this.messageID);
+                return reject('Unable to fetch message with ID ' + this.messageID + '.');
             }
             this.message = message;
             resolve(message);
@@ -349,101 +293,48 @@ class Giveaway extends EventEmitter {
     }
 
     /**
-     * @param {Discord.User} user The user to check.
-     * @returns {Promise<boolean>} If the entry was valid.
+     * @param {Discord.User} user The user to check
+     * @returns {Promise<boolean>} Whether it is a valid entry
      */
     async checkWinnerEntry(user) {
-        if (this.winnerIds.includes(user.id)) return false;
-        const member = await this.message.guild.members.fetch(user.id).catch(() => {});
+        if (this.winnerIDs.includes(user.id)) return false;
+        const guild = this.channel.guild;
+        const member = guild.member(user.id) || await guild.members.fetch(user.id).catch(() => {});
         if (!member) return false;
         const exemptMember = await this.exemptMembers(member);
         if (exemptMember) return false;
-        const hasPermission = this.exemptPermissions.some((permission) => member.permissions.has(permission));
+        const hasPermission = this.exemptPermissions.some((permission) => member.hasPermission(permission));
         if (hasPermission) return false;
         return true;
     }
 
     /**
-     * @param {Discord.User} user The user to check.
-     * @returns {Promise<number|boolean>} The highest bonus entries the user should get or false.
+     * Gets the giveaway winner(s)
+     * @param {number} [winnerCount=this.winnerCount] The number of winners to pick
+     * @returns {Promise<Discord.GuildMember[]>} The winner(s)
      */
-    async checkBonusEntries(user) {
-        const member = await this.message.guild.members.fetch(user.id).catch(() => {});
-        const entries = [];
-        const cumulativeEntries = [];
-
-        if (this.bonusEntries.length) {
-            for (const obj of this.bonusEntries) {
-                if (typeof obj.bonus === 'function') {
-                    try {
-                        const result = await obj.bonus(member);
-                        if (Number.isInteger(result) && result > 0) {
-                            if (obj.cumulative) cumulativeEntries.push(result);
-                            else entries.push(result);
-                        }
-                    } catch (err) {
-                        console.error(`Giveaway message Id: ${this.messageId}\n${serialize(obj.bonus)}\n${err}`);
-                    }
-                }
-            }
-        }
-
-        if (cumulativeEntries.length) entries.push(cumulativeEntries.reduce((a, b) => a + b));
-        if (entries.length) return Math.max.apply(Math, entries);
-        return false;
-    }
-
-    /**
-     * Gets the giveaway winner(s).
-     * @param {number} [winnerCount=this.winnerCount] The number of winners to pick.
-     * @returns {Promise<Discord.GuildMember[]>} The winner(s).
-     */
-    async roll(winnerCount = this.winnerCount) {
+        async roll(winnerCount = this.winnerCount) {
         if (!this.message) return [];
         // Pick the winner
         const reactions = this.message.reactions.cache;
-        const reaction =
-            reactions.find((r) => r.emoji.name === Discord.Util.resolvePartialEmoji(this.reaction)?.name) ||
-            reactions.get(Discord.Util.resolvePartialEmoji(this.reaction)?.id);
+        const reaction = reactions.get(this.reaction) || reactions.find((r) => r.emoji.name === this.reaction);
         if (!reaction) return [];
-        const guild = this.message.guild;
+        const guild = this.channel.guild;
         // Fetch guild members
-        if (new Discord.Intents(this.client.options.intents).has(Discord.Intents.FLAGS.GUILD_MEMBERS)) await guild.members.fetch();
-
-        // Fetch all reaction users
-        let userCollection = await reaction.users.fetch();
-        while (userCollection.size % 100 === 0) {
-            const newUsers = await reaction.users.fetch({ after: userCollection.lastKey() });
-            if (newUsers.size === 0) break;
-            userCollection = userCollection.concat(newUsers);
-        }
-
-        const users = userCollection
+        if (this.manager.options.hasGuildMembersIntent) await guild.members.fetch();
+        const users = (await reaction.users.fetch())
             .filter((u) => !u.bot || u.bot === this.botsCanWin)
-            .filter((u) => u.id !== this.client.user.id);
+            .filter((u) => u.id !== this.message.client.user.id);
         if (!users.size) return [];
 
-        // Bonus Entries
-        let userArray;
-        if (this.bonusEntries.length) {
-            userArray = [...users.values()]; // Copy all users once
-            for (const user of userArray.slice()) {
-                const isUserValidEntry = await this.checkWinnerEntry(user);
-                if (!isUserValidEntry) continue;
-
-                const highestBonusEntries = await this.checkBonusEntries(user);
-                if (!highestBonusEntries) continue;
-
-                for (let i = 0; i < highestBonusEntries; i++) userArray.push(user);
-            }
-        }
-
         let rolledWinners;
-        if (!userArray || userArray.length <= winnerCount) rolledWinners = users.random(winnerCount);
+        let userArray;
+        if (!userArray || userArray.length <= winnerCount)
+            rolledWinners = users.random(Math.min(winnerCount, users.size));
         else {
-            /**
-             * Random mechanism like https://github.com/discordjs/collection/blob/master/src/index.ts
-             * because collections/maps do not allow duplicates and so we cannot use their built in "random" function
+            /** 
+             * Random mechanism like https://github.com/discordjs/collection/blob/master/src/index.ts#L193
+             * because collections/maps do not allow dublicates and so we cannot use their built in "random" function
              */
             rolledWinners = Array.from({
                 length: Math.min(winnerCount, users.size)
@@ -457,7 +348,7 @@ class Giveaway extends EventEmitter {
             if (isValidEntry) winners.push(u);
             else {
                 // Find a new winner
-                for (const user of userArray || [...users.values()]) {
+                for (const user of userArray || users.array()) {
                     const isUserValidEntry = !winners.some((winner) => winner.id === user.id) && (await this.checkWinnerEntry(user));
                     if (isUserValidEntry) {
                         winners.push(user);
@@ -467,234 +358,126 @@ class Giveaway extends EventEmitter {
             }
         }
 
-        return await Promise.all(winners.map(async (user) => await guild.members.fetch(user.id).catch(() => {})));
+        return winners.map((user) => guild.members.cache.get(user.id) || user);
     }
 
     /**
-     * Edits the giveaway.
-     * @param {GiveawayEditOptions} options The edit options.
-     * @returns {Promise<Giveaway>} The edited giveaway.
+     * Edits the giveaway
+     * @param {GiveawayEditOptions} options The edit options
+     * @returns {Promise<Giveaway>} The edited giveaway
      */
     edit(options = {}) {
         return new Promise(async (resolve, reject) => {
-            if (this.ended) return reject('Giveaway with message Id ' + this.messageId + ' is already ended.');
-            await this.fetchMessage().catch(() => {});
-            if (!this.message) return reject('Unable to fetch message with Id ' + this.messageId + '.');
-
-            // Update data
-            if (Number.isInteger(options.newWinnerCount) && options.newWinnerCount > 0) this.winnerCount = options.newWinnerCount;
-            if (typeof options.newPrize === 'string') this.prize = options.newPrize;
-            if (!isNaN(options.addTime) && typeof options.addTime === 'number') this.endAt = this.endAt + options.addTime;
-            if (!isNaN(options.setEndTimestamp) && typeof options.setEndTimestamp === 'number') this.endAt = options.setEndTimestamp;
-            if (options.newMessages && typeof options.newMessages === 'object') this.messages = merge(this.messages, options.newMessages);
-            if (typeof options.newThumbnail === 'string') this.thumbnail = options.newThumbnail;
-            if (Array.isArray(options.newBonusEntries)) this.options.bonusEntries = options.newBonusEntries.filter((elem) => typeof elem === 'object');
-            if (options.newExtraData) this.extraData = options.newExtraData;
-            if (options.newLastChance && typeof options.newLastChance === 'object') this.options.lastChance = merge(this.options.lastChance || {}, options.newLastChance);
-
-            await this.manager.editGiveaway(this.messageId, this.data);
-            if (this.remainingTime <= 0) this.manager.end(this.messageId).catch(() => {});
-            else {
-                const embed = this.manager.generateMainEmbed(this);
-                this.message.edit({ content: this.messages.giveaway, embeds: [embed] }).catch(() => {});
+            if (this.ended) {
+                return reject('Giveaway with message ID ' + this.messageID + ' is already ended.');
             }
+            if (!this.channel) {
+                return reject('Unable to get the channel of the giveaway with message ID ' + this.messageID + '.');
+            }
+            await this.fetchMessage().catch(() => {});
+            if (!this.message) {
+                return reject('Unable to fetch message with ID ' + this.messageID + '.');
+            }
+            // Update data
+            if (options.newWinnerCount) this.winnerCount = options.newWinnerCount;
+            if (options.newPrize) this.prize = options.newPrize;
+            if (options.addTime) this.endAt = this.endAt + options.addTime;
+            if (options.setEndTimestamp) this.endAt = options.setEndTimestamp;
+            if (options.newMessages) this.messages = merge(this.messages, options.newMessages);
+            if (options.newExtraData) this.extraData = options.newExtraData;
+            // Call the db method
+            await this.manager.editGiveaway(this.messageID, this.data);
             resolve(this);
         });
     }
 
     /**
-     * Ends the giveaway.
-     * @returns {Promise<Discord.GuildMember[]>} The winner(s).
+     * Ends the giveaway
+     * @returns {Promise<Discord.GuildMember[]>} The winner(s)
      */
     end() {
         return new Promise(async (resolve, reject) => {
-            if (this.ended) return reject('Giveaway with message Id ' + this.messageId + ' is already ended');
+            if (this.ended) {
+                return reject('Giveaway with message ID ' + this.messageID + ' is already ended');
+            }
+            if (!this.channel) {
+                return reject('Unable to get the channel of the giveaway with message ID ' + this.messageID + '.');
+            }
             this.ended = true;
-            await this.fetchMessage().catch((err) => (err.includes('Try later!') ? (this.ended = false) : undefined));
-            if (!this.message) return reject('Unable to fetch message with Id ' + this.messageId + '.');
-
-            if (this.endAt < this.client.readyTimestamp) this.endAt = Date.now();
-            await this.manager.editGiveaway(this.messageId, this.data);
+            await this.fetchMessage().catch(() => {});
+            if (!this.message) {
+                return reject('Unable to fetch message with ID ' + this.messageID + '.');
+            }
             const winners = await this.roll();
-
+            this.manager.editGiveaway(this.messageID, this.data);
             if (winners.length > 0) {
-                this.winnerIds = winners.map((w) => w.id);
-                await this.manager.editGiveaway(this.messageId, this.data);
+                this.winnerIDs = winners.map((w) => w.id);
+                this.manager.editGiveaway(this.messageID, this.data);
                 const embed = this.manager.generateEndEmbed(this, winners);
-                await this.message.edit({ content: this.messages.giveawayEnded, embeds: [embed] }).catch(() => {});
-                let formattedWinners = winners.map((w) => `<@${w.id}>`).join(', ');
-                const messageString = this.messages.winMessage
-                    .replace('{winners}', formattedWinners)
-                    .replace('{prize}', this.prize)
-                    .replace('{messageURL}', this.messageURL);
-
-                const channel =
-                    this.message.channel.isThread() && !this.message.channel.permissionsFor(this.client.user)?.has([
-                        (this.message.channel.locked || !this.message.channel.joined && this.message.channel.type === 'GUILD_PRIVATE_THREAD')
-                            ? Discord.Permissions.FLAGS.MANAGE_THREADS
-                            : Discord.Permissions.FLAGS.SEND_MESSAGES
-                    ])
-                        ? this.message.channel.parent
-                        : this.message.channel;
-
-                if (messageString.length <= 2000) channel.send(messageString);
-                else {
-                    channel.send(
-                        this.messages.winMessage
-                            .substr(0, this.messages.winMessage.indexOf('{winners}'))
-                            .replace('{prize}', this.prize)
-                            .replace('{messageURL}', this.messageURL)
-                    );
-                    while (formattedWinners.length >= 2000) {
-                        await channel.send(formattedWinners.substr(0, formattedWinners.lastIndexOf(',', 1999)) + ',');
-                        formattedWinners = formattedWinners.slice(formattedWinners.substr(0, formattedWinners.lastIndexOf(',', 1999) + 2).length);
-                    }
-                    channel.send(formattedWinners);
-                    channel.send(
-                        this.messages.winMessage
-                            .substr(this.messages.winMessage.indexOf('{winners}') + 9)
-                            .replace('{prize}', this.prize)
-                            .replace('{messageURL}', this.messageURL)
-                    );
+                this.message.edit(this.messages.giveawayEnded, { content: this.messages.giveawayEnded, embed: embed }).catch((e) => {console.log(e);});
+                const formattedWinners = winners.map((w) => `<@${w.id}>`).join(', ');
+                this.message.channel.send(
+                    this.messages.winMessage
+                        .replace('{winners}', formattedWinners)
+                        .replace('{prize}', this.prize)
+                        .replace('{messageURL}', this.messageURL)
+                );
+                for(const winner of this.winnerIDs){
+                    await this.client.users.fetch(winner.replace("<", "").replace(">", "").replace("@", "").replace("!", "")).then(user => {
+                        user.send(
+                            this.messages.winMessage
+                                .replace('{winners}', formattedWinners)
+                                .replace('{prize}', this.prize)
+                                .replace('{messageURL}', this.messageURL)
+                        )
+                    }).catch(e=>{
+                        console.log(e)
+                    })
                 }
-                resolve(winners);
+                return resolve(winners);
             } else {
                 const embed = this.manager.generateNoValidParticipantsEndEmbed(this);
-                this.message.edit({ content: this.messages.giveawayEnded, embeds: [embed] }).catch(() => {});
-                resolve([]);
+                this.message.edit(this.messages.giveawayEnded, { content: this.messages.giveawayEnded, embed: embed }).catch((e) => {console.log(e);});
+                return resolve([]);
             }
         });
     }
 
     /**
-     * Rerolls the giveaway.
-     * @param {GiveawayRerollOptions} [options] The reroll options.
+     * Rerolls the giveaway
+     * @param {GiveawayRerollOptions} options
      * @returns {Promise<Discord.GuildMember[]>}
      */
-    reroll(options = {}) {
+    reroll(options) {
         return new Promise(async (resolve, reject) => {
-            if (!this.ended) return reject('Giveaway with message Id ' + this.messageId + ' is not ended.');
-            await this.fetchMessage().catch(() => {});
-            if (!this.message) return reject('Unable to fetch message with Id ' + this.messageId + '.');
-            if (!options || typeof options !== 'object') return reject(`"options" is not an object (val=${options})`);
-            options = merge(GiveawayRerollOptions, options);
-            if (options.winnerCount && (!Number.isInteger(options.winnerCount) || options.winnerCount < 1)) {
-                return reject(`options.winnerCount is not a positive integer. (val=${options.winnerCount})`);
+            if (!this.ended) {
+                return reject('Giveaway with message ID ' + this.messageID + ' is not ended.');
             }
-
-            const winners = await this.roll(options.winnerCount || undefined);
-            const channel =
-                this.message.channel.isThread() && !this.message.channel.permissionsFor(this.client.user)?.has([
-                    (this.message.channel.locked || !this.message.channel.joined && this.message.channel.type === 'GUILD_PRIVATE_THREAD')
-                        ? Discord.Permissions.FLAGS.MANAGE_THREADS
-                        : Discord.Permissions.FLAGS.SEND_MESSAGES
-                ])
-                    ? this.message.channel.parent
-                    : this.message.channel;
-
+            if (!this.channel) {
+                return reject('Unable to get the channel of the giveaway with message ID ' + this.messageID + '.');
+            }
+            await this.fetchMessage().catch(() => {});
+            if (!this.message) {
+                return reject('Unable to fetch message with ID ' + this.messageID + '.');
+            }
+            const winners = await this.roll(options.winnerCount);
             if (winners.length > 0) {
-                this.winnerIds = winners.map((w) => w.id);
-                await this.manager.editGiveaway(this.messageId, this.data);
+                this.winnerIDs = winners.map((w) => w.id);
+                this.manager.editGiveaway(this.messageID, this.data);
                 const embed = this.manager.generateEndEmbed(this, winners);
-                await this.message.edit({ content: this.messages.giveawayEnded, embeds: [embed] }).catch(() => {});
-                let formattedWinners = winners.map((w) => `<@${w.id}>`).join(', ');
-                const messageString = options.messages.congrat
+                console.log("edit2")
+                this.message.edit(this.messages.giveawayEnded, { content: this.messages.giveawayEnded, embed: embed }).catch((e) => {console.log(e);});
+                const formattedWinners = winners.map((w) => '<@' + w.id + '>').join(', ');
+                this.channel.send(options.messages.congrat
                     .replace('{winners}', formattedWinners)
                     .replace('{prize}', this.prize)
-                    .replace('{messageURL}', this.messageURL);
-                if (messageString.length <= 2000) channel.send(messageString);
-                else {
-                    channel.send(
-                        options.messages.congrat
-                            .substr(0, options.messages.congrat.indexOf('{winners}'))
-                            .replace('{prize}', this.prize)
-                            .replace('{messageURL}', this.messageURL)
-                    );
-                    while (formattedWinners.length >= 2000) {
-                        await channel.send(formattedWinners.substr(0, formattedWinners.lastIndexOf(',', 1999)) + ',');
-                        formattedWinners = formattedWinners.slice(formattedWinners.substr(0, formattedWinners.lastIndexOf(',', 1999) + 2).length);
-                    }
-                    channel.send(formattedWinners);
-                    channel.send(
-                        options.messages.congrat
-                            .substr(options.messages.congrat.indexOf('{winners}') + 9)
-                            .replace('{prize}', this.prize)
-                            .replace('{messageURL}', this.messageURL)
-                    );
-                }
+                    .replace('{messageURL}', this.messageURL)
+                );
                 resolve(winners);
             } else {
-                channel.send(options.messages.error);
+                this.channel.send(options.messages.error);
                 resolve([]);
             }
-        });
-    }
-
-    /**
-     * Pauses the giveaway.
-     * @param {PauseOptions} [options=giveaway.pauseOptions] The pause options.
-     * @returns {Promise<Giveaway>} The paused giveaway.
-     */
-    pause(options = {}) {
-        return new Promise(async (resolve, reject) => {
-            if (this.ended) return reject('Giveaway with message Id ' + this.messageId + ' is already ended.');
-            await this.fetchMessage().catch(() => {});
-            if (!this.message) return reject('Unable to fetch message with Id ' + this.messageId + '.');
-            if (this.pauseOptions.isPaused) return reject('Giveaway with message Id ' + this.messageId + ' is already paused.');
-
-            // Update data
-            const pauseOptions = this.options.pauseOptions || {};
-            if (typeof options.content === 'string') pauseOptions.content = options.content;
-            if (!isNaN(options.unPauseAfter) && options.unPauseAfter === 'number') {
-                if (options.unPauseAfter < Date.now()) {
-                    pauseOptions.unPauseAfter = Date.now() + options.unPauseAfter;
-                    this.endAt = this.endAt + options.unPauseAfter;
-                } else {
-                    pauseOptions.unPauseAfter = options.unPauseAfter;
-                    this.endAt = this.endAt + options.unPauseAfter - Date.now();
-                }
-            } else {
-                pauseOptions.durationAfterPause = this.remainingTime;
-                this.endAt = Infinity;
-            }
-            let embedColor;
-            try {
-                embedColor = Discord.Util.resolveColor(options.embedColor);
-            } catch {
-                embedColor = null;
-            }
-            if (!isNaN(embedColor) && typeof embedColor === 'number') pauseOptions.embedColor = options.embedColor;
-            pauseOptions.isPaused = true;
-            this.options.pauseOptions = pauseOptions;
-
-            await this.manager.editGiveaway(this.messageId, this.data);
-            const embed = this.manager.generateMainEmbed(this);
-            this.message.edit({ content: this.messages.giveaway, embeds: [embed] }).catch(() => {});
-            resolve(this);
-        });
-    }
-
-    /**
-     * Unpauses the giveaway.
-     * @returns {Promise<Giveaway>} The unpaused giveaway.
-     */
-    unpause() {
-        return new Promise(async (resolve, reject) => {
-            if (this.ended) return reject('Giveaway with message Id ' + this.messageId + ' is already ended.');
-            await this.fetchMessage().catch(() => {});
-            if (!this.message) return reject('Unable to fetch message with Id ' + this.messageId + '.');
-            if (!this.pauseOptions.isPaused) return reject('Giveaway with message Id ' + this.messageId + ' is not paused.');
-
-            // Update data
-            if (!isNaN(this.pauseOptions.durationAfterPause) && typeof this.pauseOptions.durationAfterPause == 'number') {
-                this.endAt = Date.now() + this.pauseOptions.durationAfterPause;
-            }
-            this.options.pauseOptions.isPaused = false;
-
-            await this.manager.editGiveaway(this.messageId, this.data);
-            const embed = this.manager.generateMainEmbed(this);
-            this.message.edit({ content: this.messages.giveaway, embeds: [embed] }).catch(() => {});
-            resolve(this);
         });
     }
 }
